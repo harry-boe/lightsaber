@@ -13,6 +13,34 @@
 #include <ArduinoJson.h>
 
 #include <AudioTools.h>
+#include "AudioCodecs/CodecMP3Helix.h"
+
+
+// forward declarations
+void callbackInit();
+Stream* callbackStream();
+
+// data
+// const int chipSelect=PIN_CS;
+AudioSourceCallback source(callbackStream,callbackInit);
+I2SStream i2s;
+MP3DecoderHelix decoder;
+AudioPlayer player(source, i2s, decoder);
+File audioFile;
+
+void callbackInit() {
+
+  // open the audio file 
+
+}
+
+
+Stream* callbackStream() {
+  auto lastFile = audioFile;
+  audioFile = audioFile.openNextFile();
+  lastFile.close();
+  return &audioFile;
+}
 
 
 
@@ -20,20 +48,21 @@
 #define BUTTON_PIN 10
 #define BAUDRATE 9600
 
-// Which pin on the Arduino is connected to the NeoPixels?
-#define PIN        9 // On Trinket or Gemma, suggest changing this to 1
-
-// How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS 50 // Popular NeoPixel ring size
 
 // When setting up the NeoPixel library, we tell it how many pixels,
 // and which pin to use to send signals. Note that for older NeoPixel
 // strips you might need to change the third parameter -- see the
 // strandtest example for more information on possible values.
+// Which pin on the Arduino is connected to the NeoPixels?
+
+#define PIN        9 // On Trinket or Gemma, suggest changing this to 1
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS 50 // Popular NeoPixel ring size
+#define DELAYVAL 10 // Time (in milliseconds) to pause between pixels
+
+
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-#define DELAYVAL 10 // Time (in milliseconds) to pause between pixels
-int color = 0;
 
 // Our configuration structure.
 //
@@ -45,6 +74,7 @@ struct Config {
   char hostname[64];
   int port;
   char color[6];
+  int brightness;
 };
 
 const char *filename = "/config.json";  // <- SD library uses 8.3 filenames
@@ -62,7 +92,9 @@ void onPressed()
     Serial.printf("%u Button pressed\n", millis() - lastEvent);
     lastEvent = millis();
     if (!bladeIsOn) {
-      Serial.println("Turn on Blade");
+      Serial.printf("Turn on Blade '%c' %s\n", config.color[0], config.color );
+
+      pixels.clear();
 
       // The first NeoPixel in a strand is #0, second is 1, all the way up
       // to the count of pixels minus one.
@@ -70,14 +102,14 @@ void onPressed()
 
         // pixels.Color() takes RGB values, from 0,0,0 up to 255,255,255
         // Here we're using a moderately bright green color:
-        switch (color) {
-          case 0:
+        switch (config.color[0]) {
+          case 'r':
         pixels.setPixelColor(i, pixels.Color(20, 0, 0));
         break;
-          case 1:
+          case 'g':
         pixels.setPixelColor(i, pixels.Color(0, 20, 0));
         break;
-          case 2:
+          case 'b':
         pixels.setPixelColor(i, pixels.Color(0, 0, 20));
         break;
           default:
@@ -147,9 +179,12 @@ void initConfig() {
     strlcpy(config.color,                  // <- destination
             doc["color"] | "red",  // <- source
             sizeof(config.color));         // <- destination's capacity
+    config.brightness = doc["brightness"] | 20;
 
     Serial.println(config.hostname);
     Serial.println(config.color);
+    Serial.printf("color %s\n", config.color);
+    Serial.printf("brightness %d\n", config.brightness);
 
     file.close();
 

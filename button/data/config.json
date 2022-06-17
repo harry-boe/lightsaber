@@ -1,5 +1,6 @@
 {
-    "hostname": "examples.com",
-    "port": 2731,
-    "color": "green"
+    "hostname": "blade.hbonet.ch",
+    "port": 80,
+    "color": "blue",
+    "brightness": 100
 }

@@ -28,8 +28,16 @@ MP3DecoderHelix decoder;
 AudioPlayer player(source, i2s, decoder);
 File audioFile;
 
+const char *fileOnSound = "/SaberOn.mp3";
+
 void callbackInit() {
 
+  audioFile = SPIFFS.open(fileOnSound, "r");
+  if (audioFile) {
+    Serial.printf("Load Sound File %s\n", fileOnSound);    
+  } else {
+    Serial.println("failed to read sound file)");
+  }
   // open the audio file 
 
 }
@@ -40,6 +48,14 @@ Stream* callbackStream() {
   audioFile = audioFile.openNextFile();
   lastFile.close();
   return &audioFile;
+}
+
+
+void callbackPrintMetaData(MetaDataType type, const char* str, int len){
+  Serial.print("==> ");
+  Serial.print(toStr(type));
+  Serial.print(": ");
+  Serial.println(str);
 }
 
 
@@ -215,6 +231,17 @@ void setup()
 
   pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
 
+
+  AudioLogger::instance().begin(Serial, AudioLogger::Info);
+
+  // setup output
+  auto cfg = i2s.defaultConfig(TX_MODE);
+  i2s.begin(cfg);
+
+  // setup player
+  player.setMetadataCallback(callbackPrintMetaData);
+  player.begin();
+
 }
 
 
@@ -224,4 +251,7 @@ void loop()
 {
   // Continuously read the status of the button.
   button.read();
+
+  player.copy();
+
 }
